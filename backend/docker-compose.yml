@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "${PORT:-3010}:3010"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3010
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - API_BASE_URL=${API_BASE_URL}
+      - CACHE_TTL=${CACHE_TTL:-3600}
+      - PRODUCT_DETAIL_CACHE_TTL=${PRODUCT_DETAIL_CACHE_TTL:-900}
+    volumes:
+      - ./src:/usr/src/app/src
+      - ./.env:/usr/src/app/.env
+    networks:
+      - app-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge 
